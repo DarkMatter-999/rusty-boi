@@ -5,6 +5,8 @@ pub enum Instruction {
     RLC(PreFixTarget),
     JP(JumpTest),
     LD(LoadType),
+    PUSH(StackTarget),
+    POP(StackTarget),
 }
 
 impl Instruction {
@@ -58,4 +60,8 @@ pub enum LoadByteSource {
 
 pub enum LoadType {
     Byte(LoadByteTarget, LoadByteSource)
+}
+
+pub enum StackTarget {
+    AF,BC,DE,HL,
 }

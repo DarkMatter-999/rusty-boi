@@ -70,6 +70,14 @@ impl CPU {
                     }
                 }
             }
+            Instruction::PUSH(target) => {
+                let value = match target {
+                    StackTarget::AF => self.registers.get_af(),
+                    _ => panic!("Invalid stack value recieved")
+                };
+                self.push(value);
+                self.pc.wrapping_add(1)
+            }
             _ => {
                     self.pc
             }
@@ -94,5 +102,23 @@ impl CPU {
         } else {
             self.pc.wrapping_add(3)
         }
+    }
+
+    fn push(&mut self, value: u16) {
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.write_byte(self.sp, ((value & 0xFF00) >> 8) as u8);
+
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.write_byte(self.sp, (value & 0xFF) as u8);
+    }
+
+    fn pop(&mut self) -> u16 {
+        let lsb = self.bus.read_bype(self.sp) as u16;
+        self.sp = self.sp.wrapping_add(1);
+
+        let msb = self.bus.read_bype(self.sp) as u16;
+        self.sp = self.sp.wrapping_add(1);
+
+        (msb << 8) | lsb
     }
 }
