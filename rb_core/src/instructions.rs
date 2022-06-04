@@ -9,6 +9,9 @@ pub enum Instruction {
     POP(StackTarget),
     CALL(JumpTest),
     RET(JumpTest),
+    NOP,
+    HALT,
+    
 }
 
 impl Instruction {

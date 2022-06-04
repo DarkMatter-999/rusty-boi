@@ -7,6 +7,7 @@ struct CPU {
     pc: u16,
     sp: u16,
     bus: MemBus,
+    is_halted: bool,
 }
 
 impl CPU {
@@ -99,6 +100,13 @@ impl CPU {
                     _ => panic!("Invalid ret value recieved")
                 };
                 self.ret(jumpcondition)
+            }
+            Instruction::NOP => {
+                self.pc.wrapping_add(1)
+            }
+            Instruction::HALT => {
+                self.is_halted = true;
+                self.pc.wrapping_add(1)
             }
             _ => {
                     self.pc
