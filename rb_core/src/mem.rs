@@ -5,7 +5,7 @@ pub struct MemBus {
 }
 
 impl MemBus {
-    pub fn read_bype(&self, addr: u16) -> u8 {
+    pub fn read_byte(&self, addr: u16) -> u8 {
         self.memory[addr as usize]
     }
 

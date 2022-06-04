@@ -11,12 +11,12 @@ struct CPU {
 
 impl CPU {
     fn step(&mut self) {
-        let mut instruction_byte = self.bus.read_bype(self.pc);
+        let mut instruction_byte = self.bus.read_byte(self.pc);
         
         let prefix = instruction_byte == 0xcb;
 
         if prefix {
-            instruction_byte = self.bus.read_bype(self.pc + 1);
+            instruction_byte = self.bus.read_byte(self.pc + 1);
         }
 
         let nextpc = if let Some(instruction) = Instruction::from_byte(instruction_byte, prefix) {
@@ -55,7 +55,7 @@ impl CPU {
                     LoadType::Byte(target,source) => {
                         let source_val = match source {
                             LoadByteSource::A => self.registers.a,
-                            LoadByteSource::HLI => self.bus.read_bype(self.registers.get_hl()),
+                            LoadByteSource::HLI => self.bus.read_byte(self.registers.get_hl()),
                             _ => panic!("Invalid load source recieved")
                         };
                         match target {
@@ -78,6 +78,28 @@ impl CPU {
                 self.push(value);
                 self.pc.wrapping_add(1)
             }
+            Instruction::CALL(target) => {
+                let jumpcondition = match target {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Always => true,
+                    _ => panic!("Invalid call value recieved")
+                };
+                self.call(jumpcondition)
+            }
+            Instruction::RET(target) => {
+                let jumpcondition = match target {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Always => true,
+                    _ => panic!("Invalid ret value recieved")
+                };
+                self.ret(jumpcondition)
+            }
             _ => {
                     self.pc
             }
@@ -96,8 +118,8 @@ impl CPU {
 
     fn jump(&mut self, jump: bool) -> u16 {
         if jump {
-            let lsb = self.bus.read_bype(self.pc + 1) as u16;
-            let msb = self.bus.read_bype(self.pc + 2) as u16;
+            let lsb = self.bus.read_byte(self.pc + 1) as u16;
+            let msb = self.bus.read_byte(self.pc + 2) as u16;
             (msb << 8) | lsb
         } else {
             self.pc.wrapping_add(3)
@@ -113,12 +135,34 @@ impl CPU {
     }
 
     fn pop(&mut self) -> u16 {
-        let lsb = self.bus.read_bype(self.sp) as u16;
+        let lsb = self.bus.read_byte(self.sp) as u16;
         self.sp = self.sp.wrapping_add(1);
 
-        let msb = self.bus.read_bype(self.sp) as u16;
+        let msb = self.bus.read_byte(self.sp) as u16;
         self.sp = self.sp.wrapping_add(1);
 
         (msb << 8) | lsb
+    }
+
+    fn call(&mut self, jump: bool) -> u16 {
+        let nextpc = self.pc.wrapping_add(3);
+        if jump {
+            self.push(nextpc);
+            self.read_next_word()
+        } else {
+            nextpc
+        }
+    }
+
+    fn ret(&mut self, jump: bool) -> u16 {
+        if jump {
+            self.pop()
+        } else {
+            self.pc.wrapping_add(1)
+        }
+    }
+
+    fn read_next_word(&self) -> u16 {
+        ((self.bus.read_byte(self.pc + 2) as u16) << 8) | (self.bus.read_byte(self.pc + 1) as u16)
     }
 }

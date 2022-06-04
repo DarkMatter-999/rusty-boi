@@ -7,6 +7,8 @@ pub enum Instruction {
     LD(LoadType),
     PUSH(StackTarget),
     POP(StackTarget),
+    CALL(JumpTest),
+    RET(JumpTest),
 }
 
 impl Instruction {
