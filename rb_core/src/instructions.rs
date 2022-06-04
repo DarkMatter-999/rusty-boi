@@ -1,17 +1,64 @@
 
 pub enum Instruction {
-    ADD(ArithmeticTarget),
+    // Arithmetic Instructions
     INC(IncDecTarget),
+    DEC(IncDecTarget),
+
+    ADD(ArithmeticTarget),
+    ADC(ArithmeticTarget),
+    ADDHL(ADDHLTarget),
+    ADDSP,
+    SUB(ArithmeticTarget),
+    SBC(ArithmeticTarget),
+    AND(ArithmeticTarget),
+    OR(ArithmeticTarget),
+    XOR(ArithmeticTarget),
+    CP(ArithmeticTarget),
+
+    CCF,
+    SCF,
+
+    RRA,
+    RLA,
+    RRCA,
+    RLCA,
+    CPL,
+    DAA,
+
+    // Prefix Instructions
+    BIT(PreFixTarget, BitPosition),
+    RES(PreFixTarget, BitPosition),
+    SET(PreFixTarget, BitPosition),
+    SRL(PreFixTarget),
+    RR(PreFixTarget),
+    RL(PreFixTarget),
+    RRC(PreFixTarget),
     RLC(PreFixTarget),
+    SRA(PreFixTarget),
+    SLA(PreFixTarget),
+    SWAP(PreFixTarget),
+
+    // Jump Instructions
     JP(JumpTest),
+    JR(JumpTest),
+    JPI,
+
+    // Load Instructions
     LD(LoadType),
+
+    // Stack Instructions
     PUSH(StackTarget),
     POP(StackTarget),
     CALL(JumpTest),
     RET(JumpTest),
-    NOP,
+    RETI,
+    RST(RSTLocation),
+
+    // Control Instructions
     HALT,
-    
+    NOP,
+    DI,
+    EI,
 }
 
 impl Instruction {
@@ -69,4 +116,45 @@ pub enum LoadType {
 
 pub enum StackTarget {
     AF,BC,DE,HL,
+}
+
+pub enum ADDHLTarget {
+    BC,DE,HL,SP,
+}
+
+pub enum BitPosition {
+    B0,B1,B2,B3,B4,B5,B6,B7,
+}
+impl std::convert::From<BitPosition> for u8 {
+    fn from(position: BitPosition) -> u8 {
+        match position {
+            BitPosition::B0 => 0,
+            BitPosition::B1 => 1,
+            BitPosition::B2 => 2,
+            BitPosition::B3 => 3,
+            BitPosition::B4 => 4,
+            BitPosition::B5 => 5,
+            BitPosition::B6 => 6,
+            BitPosition::B7 => 7,
+        }
+    }
+}
+
+pub enum RSTLocation {
+    x00,x08,x10,x18,x20,x28,x30,x38,
+}
+
+impl RSTLocation {
+    pub fn to_hex(&self) -> u16 {
+        match self {
+            RSTLocation::x00 => 0x00,
+            RSTLocation::x08 => 0x08,
+            RSTLocation::x10 => 0x10,
+            RSTLocation::x18 => 0x18,
+            RSTLocation::x20 => 0x20,
+            RSTLocation::x28 => 0x28,
+            RSTLocation::x30 => 0x30,
+            RSTLocation::x38 => 0x38,
+        }
+    }
 }

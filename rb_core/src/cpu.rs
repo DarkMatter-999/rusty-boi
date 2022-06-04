@@ -30,10 +30,134 @@ impl CPU {
 
     fn execute(&mut self, instruction: Instruction) -> u16 {
         match instruction {
-            Instruction::ADD(target ) => {
+            Instruction::INC(target) => {
                 match target {
+                    IncDecTarget::A => {
+                        self.registers.a = self.registers.a.wrapping_add(1);
+                    }
+                    IncDecTarget::B => {
+                        self.registers.b = self.registers.b.wrapping_add(1);
+                    }
+                    IncDecTarget::C => {
+                        self.registers.c = self.registers.c.wrapping_add(1);
+                    }
+                    IncDecTarget::D => {
+                        self.registers.d = self.registers.d.wrapping_add(1);
+                    }
+                    IncDecTarget::E => {
+                        self.registers.e = self.registers.e.wrapping_add(1);
+                    }
+                    IncDecTarget::F => {
+                        self.registers.f = FlagReg::from(u8::from(self.registers.f).wrapping_add(1));
+                    }
+                    IncDecTarget::H => {
+                        self.registers.h = self.registers.h.wrapping_add(1);
+                    }
+                    IncDecTarget::L => {
+                        self.registers.l = self.registers.l.wrapping_add(1);
+                    }
+                    IncDecTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let res = self.bus.read_byte(hl).wrapping_add(1);
+                        self.bus.write_byte(hl, res);
+                    }
+                    IncDecTarget::BC => {
+                        let bc = self.registers.get_bc();
+                        self.registers.set_bc(bc.wrapping_add(1));
+                    }
+                    IncDecTarget::DE => {
+                        let de = self.registers.get_de();
+                        self.registers.set_de(de.wrapping_add(1));
+                    }
+                    IncDecTarget::HL => {
+                        let hl = self.registers.get_hl();
+                        self.registers.set_hl(hl.wrapping_add(1));
+                    }
+                    IncDecTarget::SP => {
+                        let sp = self.sp;
+                        self.sp = sp.wrapping_add(1);
+                    }
+                }
+                self.pc.wrapping_add(1)
+            }
+            Instruction::DEC(target) => {
+                match target {
+                    IncDecTarget::A => {
+                        self.registers.a = self.registers.a.wrapping_sub(1);
+                    }
+                    IncDecTarget::B => {
+                        self.registers.b = self.registers.b.wrapping_sub(1);
+                    }
+                    IncDecTarget::C => {
+                        self.registers.c = self.registers.c.wrapping_sub(1);
+                    }
+                    IncDecTarget::D => {
+                        self.registers.d = self.registers.d.wrapping_sub(1);
+                    }
+                    IncDecTarget::E => {
+                        self.registers.e = self.registers.e.wrapping_sub(1);
+                    }
+                    IncDecTarget::F => {
+                        self.registers.f = FlagReg::from(u8::from(self.registers.f).wrapping_sub(1));
+                    }
+                    IncDecTarget::H => {
+                        self.registers.h = self.registers.h.wrapping_sub(1);
+                    }
+                    IncDecTarget::L => {
+                        self.registers.l = self.registers.l.wrapping_sub(1);
+                    }
+                    IncDecTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let res = self.bus.read_byte(hl).wrapping_sub(1);
+                        self.bus.write_byte(hl, res);
+                    }
+                    IncDecTarget::BC => {
+                        let bc = self.registers.get_bc();
+                        self.registers.set_bc(bc.wrapping_sub(1));
+                    }
+                    IncDecTarget::DE => {
+                        let de = self.registers.get_de();
+                        self.registers.set_de(de.wrapping_sub(1));
+                    }
+                    IncDecTarget::HL => {
+                        let hl = self.registers.get_hl();
+                        self.registers.set_hl(hl.wrapping_sub(1));
+                    }
+                    IncDecTarget::SP => {
+                        let sp = self.sp;
+                        self.sp = sp.wrapping_sub(1);
+                    }
+                }
+                self.pc.wrapping_add(1)
+            }
+            Instruction::ADD(target) => {
+                match target {
+                    ArithmeticTarget::B => {
+                        self.registers.a = self.add(self.registers.b);
+                        self.pc.wrapping_add(1)
+                    }
                     ArithmeticTarget::C => { 
                         self.registers.a = self.add(self.registers.c);
+                        self.pc.wrapping_add(1)
+                    }
+                    ArithmeticTarget::D => {
+                        self.registers.a = self.add(self.registers.d);
+                        self.pc.wrapping_add(1)
+                    }
+                    ArithmeticTarget::E => {
+                        self.registers.a = self.add(self.registers.e);
+                        self.pc.wrapping_add(1)
+                    }
+                    ArithmeticTarget::F => {
+                        self.registers.a = self.add(u8::from(self.registers.f));
+                        self.pc.wrapping_add(1)
+                    }
+                    ArithmeticTarget::H => {
+                        self.registers.a = self.add(self.registers.h);
+                        self.pc.wrapping_add(1)
+                    }
+                    ArithmeticTarget::L => {
+                        self.registers.a = self.add(self.registers.l);
                         self.pc.wrapping_add(1)
                     }
                     _ => {
@@ -41,6 +165,25 @@ impl CPU {
                     }
                 }
             }
+            Instruction::ADDHL(target) => {
+                let value = match target {
+                    ADDHLTarget::BC => self.registers.get_bc(),
+                    ADDHLTarget::DE => self.registers.get_de(),
+                    ADDHLTarget::HL => self.registers.get_hl(),
+                    ADDHLTarget::SP => self.sp,
+                };
+                let hl = self.registers.get_hl();
+                let (result, carry) = hl.overflowing_add(value);
+                
+                self.registers.f.carry = carry;
+                self.registers.f.substract = false;
+                let mask = 0b111_1111_1111;
+                self.registers.f.half_carry = (value & mask) + (hl & mask) > mask;
+
+                self.registers.set_hl(result);
+                self.pc.wrapping_add(1)
+            }
+            // TODO ADC
             Instruction::JP(target) => {
                 let jumpcondition = match target {
                     JumpTest::NotZero => !self.registers.f.zero,
