@@ -87,7 +87,7 @@ impl Instruction {
 }
 
 pub enum ArithmeticTarget {
-    A,B,C,D,E,F,H,L,
+    A,B,C,D,E,F,H,L,D8,HLI,
 }
 
 pub enum IncDecTarget {
