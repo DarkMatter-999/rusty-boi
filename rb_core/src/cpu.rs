@@ -535,6 +535,204 @@ impl CPU {
                 self.registers.a = result;
                 self.pc.wrapping_add(1)
             }
+            Instruction::BIT(target, bit_position) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.bit_test(self.registers.a, bit_position),
+                    PreFixTarget::B => self.registers.b = self.bit_test(self.registers.b, bit_position),
+                    PreFixTarget::C => self.registers.c = self.bit_test(self.registers.c, bit_position),
+                    PreFixTarget::D => self.registers.d = self.bit_test(self.registers.d, bit_position),
+                    PreFixTarget::E => self.registers.e = self.bit_test(self.registers.e, bit_position),
+                    PreFixTarget::H => self.registers.h = self.bit_test(self.registers.h, bit_position),
+                    PreFixTarget::L => self.registers.l = self.bit_test(self.registers.l, bit_position),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.bit_test(value, bit_position);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::RES(target, bit_position) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.reset_bit(self.registers.a, bit_position),
+                    PreFixTarget::B => self.registers.b = self.reset_bit(self.registers.b, bit_position),
+                    PreFixTarget::C => self.registers.c = self.reset_bit(self.registers.c, bit_position),
+                    PreFixTarget::D => self.registers.d = self.reset_bit(self.registers.d, bit_position),
+                    PreFixTarget::E => self.registers.e = self.reset_bit(self.registers.e, bit_position),
+                    PreFixTarget::H => self.registers.h = self.reset_bit(self.registers.h, bit_position),
+                    PreFixTarget::L => self.registers.l = self.reset_bit(self.registers.l, bit_position),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.reset_bit(value, bit_position);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::SET(target, bit_position) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.set_bit(self.registers.a, bit_position),
+                    PreFixTarget::B => self.registers.b = self.set_bit(self.registers.b, bit_position),
+                    PreFixTarget::C => self.registers.c = self.set_bit(self.registers.c, bit_position),
+                    PreFixTarget::D => self.registers.d = self.set_bit(self.registers.d, bit_position),
+                    PreFixTarget::E => self.registers.e = self.set_bit(self.registers.e, bit_position),
+                    PreFixTarget::H => self.registers.h = self.set_bit(self.registers.h, bit_position),
+                    PreFixTarget::L => self.registers.l = self.set_bit(self.registers.l, bit_position),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.set_bit(value, bit_position);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::SRL(target) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.shift_right_logical(self.registers.a),
+                    PreFixTarget::B => self.registers.b = self.shift_right_logical(self.registers.b),
+                    PreFixTarget::C => self.registers.c = self.shift_right_logical(self.registers.c),
+                    PreFixTarget::D => self.registers.d = self.shift_right_logical(self.registers.d),
+                    PreFixTarget::E => self.registers.e = self.shift_right_logical(self.registers.e),
+                    PreFixTarget::H => self.registers.h = self.shift_right_logical(self.registers.h),
+                    PreFixTarget::L => self.registers.l = self.shift_right_logical(self.registers.l),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.shift_right_logical(value);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::RR(target) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.rotate_right_through_carry_set_zero(self.registers.a),
+                    PreFixTarget::B => self.registers.b = self.rotate_right_through_carry_set_zero(self.registers.b),
+                    PreFixTarget::C => self.registers.c = self.rotate_right_through_carry_set_zero(self.registers.c),
+                    PreFixTarget::D => self.registers.d = self.rotate_right_through_carry_set_zero(self.registers.d),
+                    PreFixTarget::E => self.registers.e = self.rotate_right_through_carry_set_zero(self.registers.e),
+                    PreFixTarget::H => self.registers.h = self.rotate_right_through_carry_set_zero(self.registers.h),
+                    PreFixTarget::L => self.registers.l = self.rotate_right_through_carry_set_zero(self.registers.l),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.rotate_right_through_carry_set_zero(value);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::RL(target) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.rotate_left_through_carry_set_zero(self.registers.a),
+                    PreFixTarget::B => self.registers.b = self.rotate_left_through_carry_set_zero(self.registers.b),
+                    PreFixTarget::C => self.registers.c = self.rotate_left_through_carry_set_zero(self.registers.c),
+                    PreFixTarget::D => self.registers.d = self.rotate_left_through_carry_set_zero(self.registers.d),
+                    PreFixTarget::E => self.registers.e = self.rotate_left_through_carry_set_zero(self.registers.e),
+                    PreFixTarget::H => self.registers.h = self.rotate_left_through_carry_set_zero(self.registers.h),
+                    PreFixTarget::L => self.registers.l = self.rotate_left_through_carry_set_zero(self.registers.l),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.rotate_left_through_carry_set_zero(value);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::RRC(target) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.rotate_right_set_zero(self.registers.a),
+                    PreFixTarget::B => self.registers.b = self.rotate_right_set_zero(self.registers.b),
+                    PreFixTarget::C => self.registers.c = self.rotate_right_set_zero(self.registers.c),
+                    PreFixTarget::D => self.registers.d = self.rotate_right_set_zero(self.registers.d),
+                    PreFixTarget::E => self.registers.e = self.rotate_right_set_zero(self.registers.e),
+                    PreFixTarget::H => self.registers.h = self.rotate_right_set_zero(self.registers.h),
+                    PreFixTarget::L => self.registers.l = self.rotate_right_set_zero(self.registers.l),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.rotate_right_set_zero(value);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::RLC(target) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.rotate_left_set_zero(self.registers.a),
+                    PreFixTarget::B => self.registers.b = self.rotate_left_set_zero(self.registers.b),
+                    PreFixTarget::C => self.registers.c = self.rotate_left_set_zero(self.registers.c),
+                    PreFixTarget::D => self.registers.d = self.rotate_left_set_zero(self.registers.d),
+                    PreFixTarget::E => self.registers.e = self.rotate_left_set_zero(self.registers.e),
+                    PreFixTarget::H => self.registers.h = self.rotate_left_set_zero(self.registers.h),
+                    PreFixTarget::L => self.registers.l = self.rotate_left_set_zero(self.registers.l),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.rotate_left_set_zero(value);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::SRA(target) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.shift_right_arithmetic(self.registers.a),
+                    PreFixTarget::B => self.registers.b = self.shift_right_arithmetic(self.registers.b),
+                    PreFixTarget::C => self.registers.c = self.shift_right_arithmetic(self.registers.c),
+                    PreFixTarget::D => self.registers.d = self.shift_right_arithmetic(self.registers.d),
+                    PreFixTarget::E => self.registers.e = self.shift_right_arithmetic(self.registers.e),
+                    PreFixTarget::H => self.registers.h = self.shift_right_arithmetic(self.registers.h),
+                    PreFixTarget::L => self.registers.l = self.shift_right_arithmetic(self.registers.l),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.shift_right_arithmetic(value);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::SLA(target) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.shift_left_arithmetic(self.registers.a),
+                    PreFixTarget::B => self.registers.b = self.shift_left_arithmetic(self.registers.b),
+                    PreFixTarget::C => self.registers.c = self.shift_left_arithmetic(self.registers.c),
+                    PreFixTarget::D => self.registers.d = self.shift_left_arithmetic(self.registers.d),
+                    PreFixTarget::E => self.registers.e = self.shift_left_arithmetic(self.registers.e),
+                    PreFixTarget::H => self.registers.h = self.shift_left_arithmetic(self.registers.h),
+                    PreFixTarget::L => self.registers.l = self.shift_left_arithmetic(self.registers.l),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.shift_left_arithmetic(value);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
+            Instruction::SWAP(target) => {
+                match target {
+                    PreFixTarget::A => self.registers.a = self.swap(self.registers.a),
+                    PreFixTarget::B => self.registers.b = self.swap(self.registers.b),
+                    PreFixTarget::C => self.registers.c = self.swap(self.registers.c),
+                    PreFixTarget::D => self.registers.d = self.swap(self.registers.d),
+                    PreFixTarget::E => self.registers.e = self.swap(self.registers.e),
+                    PreFixTarget::H => self.registers.h = self.swap(self.registers.h),
+                    PreFixTarget::L => self.registers.l = self.swap(self.registers.l),
+                    PreFixTarget::HLI => {
+                        let hl = self.registers.get_hl();
+                        let value = self.bus.read_byte(hl);
+                        let result = self.swap(value);
+                        self.bus.write_byte(hl, result);
+                    }
+                }
+                self.pc.wrapping_add(2)
+            }
             Instruction::JP(target) => {
                 let jumpcondition = match target {
                     JumpTest::NotZero => !self.registers.f.zero,
@@ -545,21 +743,51 @@ impl CPU {
                 };
                 self.jump(jumpcondition)
             }
+            Instruction::JR(target) => {
+                let jump_condition = match target {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Always => true,
+                };
+                self.jump_rel(jump_condition)
+            }
+            Instruction::JPI => {
+                self.registers.get_hl()
+            }
+            // Todo Instruction::LD
             Instruction::LD(loadtype) => {
                 match loadtype {
                     LoadType::Byte(target,source) => {
                         let source_val = match source {
                             LoadByteSource::A => self.registers.a,
+                            LoadByteSource::B => self.registers.b,
+                            LoadByteSource::C => self.registers.c,
+                            LoadByteSource::D => self.registers.d,
+                            LoadByteSource::E => self.registers.e,
+                            LoadByteSource::H => self.registers.h,
+                            LoadByteSource::L => self.registers.l,
+                            LoadByteSource::D8 => self.read_next_byte(),
                             LoadByteSource::HLI => self.bus.read_byte(self.registers.get_hl()),
                             _ => panic!("Invalid load source recieved")
                         };
                         match target {
                             LoadByteTarget::A => self.registers.a = source_val,
-                            LoadByteTarget::HLI => self.bus.write_byte(self.registers.get_hl(), source_val),
+                            LoadByteTarget::B => self.registers.b = source_val,
+                            LoadByteTarget::C => self.registers.c = source_val,
+                            LoadByteTarget::D => self.registers.d = source_val,
+                            LoadByteTarget::E => self.registers.e = source_val,
+                            LoadByteTarget::H => self.registers.h = source_val,
+                            LoadByteTarget::L => self.registers.l = source_val,
+                            LoadByteTarget::HLI => {
+                                self.bus.write_byte(self.registers.get_hl(), source_val)
+                            }
                             _ => panic!("Invalid load target recieved")
                         }    
                         match source {
                             LoadByteSource::D8 => self.pc.wrapping_add(2),
+                            LoadByteSource::HLI => self.pc.wrapping_add(1),
                             _ => self.pc.wrapping_add(1)
                         }                     
                     }
@@ -644,6 +872,90 @@ impl CPU {
         self.registers.f.half_carry = (self.registers.a & 0xF) < (n & 0xF) + (self.registers.f.carry as u8);
         sub2
     }
+    fn bit_test(&mut self, value: u8, bit_position: BitPosition) -> u8 {
+        let bit_position: u8 = bit_position.into();
+        let result = (value >> bit_position) & 0b1;
+        self.registers.f.zero = result == 0;
+        self.registers.f.substract = false;
+        self.registers.f.half_carry = true;
+        result
+    }
+    fn reset_bit(&mut self, value: u8, bit_position: BitPosition) -> u8 {
+        let bit_position: u8 = bit_position.into();
+        value & !(1 << bit_position)
+    }
+    fn set_bit(&mut self, value: u8, bit_position: BitPosition) -> u8 {
+        let bit_position: u8 = bit_position.into();
+        value | (1 << bit_position)
+    }
+    fn shift_right_logical(&mut self, value: u8) -> u8 {
+        let new_value = value >> 1;
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.substract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = value & 0b1 == 0b1;
+        new_value
+    }
+    fn rotate_right_through_carry_set_zero(&mut self, value: u8) -> u8 {
+        let carry_bit = if self.registers.f.carry { 1 } else { 0 } << 7;
+        let new_value = carry_bit | (value >> 1);
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.substract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = value & 0b1 == 0b1;
+        new_value
+    }
+    fn rotate_left_through_carry_set_zero(&mut self, value: u8) -> u8 {
+        let carry_bit = if self.registers.f.carry { 1 } else { 0 };
+        let new_value = (value << 1) | carry_bit;
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.substract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = (value & 0x80) == 0x80;
+        new_value
+    }
+    fn rotate_right_set_zero(&mut self, value: u8) -> u8 {
+        let new_value = value.rotate_right(1);
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.substract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = value & 0b1 == 0b1;
+        new_value
+    }
+    fn rotate_left_set_zero(&mut self, value: u8) -> u8 {
+        let carry = (value & 0x80) >> 7;
+        let new_value = value.rotate_left(1) | carry;
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.substract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = carry == 0x01;
+        new_value
+    }
+    fn shift_right_arithmetic(&mut self, value: u8) -> u8 {
+        let msb = value & 0x80;
+        let new_value = msb | (value >> 1);
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.substract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = value & 0b1 == 0b1;
+        new_value
+    }
+    fn shift_left_arithmetic(&mut self, value: u8) -> u8 {
+        let new_value = value << 1;
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.substract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = value & 0x80 == 0x80;
+        new_value
+    }
+    fn swap(&mut self, value: u8) -> u8 {
+        let new_value = ((value & 0xf) << 4) | ((value & 0xf0) >> 4);
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.substract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
+        new_value
+    }
     fn jump(&mut self, jump: bool) -> u16 {
         if jump {
             let lsb = self.bus.read_byte(self.pc + 1) as u16;
@@ -653,7 +965,20 @@ impl CPU {
             self.pc.wrapping_add(3)
         }
     }
-
+    fn jump_rel(&mut self, jump: bool) -> u16 {
+        let next_step = self.pc.wrapping_add(2);
+        if jump {
+            let offset = self.read_next_byte() as i8;
+            let pc = if offset >= 0 {
+                next_step.wrapping_add(offset as u16)
+            } else {
+                next_step.wrapping_sub(offset.abs() as u16)
+            };
+            pc
+        } else {
+            next_step
+        }
+    }
     fn push(&mut self, value: u16) {
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, ((value & 0xFF00) >> 8) as u8);
