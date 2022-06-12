@@ -2,6 +2,13 @@ pub const VRAM_BEGIN: usize = 0x8000;
 pub const VRAM_END: usize = 0x9FFF;
 const VRAM_SIZE: usize = VRAM_END - VRAM_BEGIN + 1;
 
+const OAM_BEGIN: usize = 0xFE00;
+const OAM_END: usize = 0xFE9F;
+const OAM_SIZE: usize = OAM_END - OAM_BEGIN + 1;
+
+const SCREEN_WIDTH: usize = 160;
+const SCREEN_HEIGHT: usize = 144;
+
 #[derive(Copy, Clone)]
 enum Tilepixelvalues {
     Zero,
@@ -9,12 +16,22 @@ enum Tilepixelvalues {
     Two,
     Three
 }
-
-type Tile = [[Tilepixelvalues; 8]; 8];
-
-fn emptytile() -> Tile {
-    [[Tilepixelvalues::Zero; 8]; 8]
+impl Default for Tilepixelvalues {
+    fn default() -> Self {
+        Tilepixelvalues::Zero
+    }
 }
+type TileRow = [Tilepixelvalues; 8];
+type Tile = [TileRow; 8];
+#[inline(always)]
+fn empty_tile() -> Tile {
+    [[Default::default(); 8]; 8]
+}
+// type Tile = [[Tilepixelvalues; 8]; 8];
+
+// fn emptytile() -> Tile {
+//     [[Tilepixelvalues::Zero; 8]; 8]
+// }
 
 pub struct GPU {
     vram: [u8; VRAM_SIZE],
@@ -23,6 +40,12 @@ pub struct GPU {
 }
 
 impl GPU {
+    pub fn new() -> GPU {
+        GPU { 
+            vram: [0; VRAM_SIZE],
+            tile_set: [empty_tile(); 384],
+        }
+    }
     pub fn read_vram(&self, addr: usize) -> u8 {
         self.vram[addr]
     }

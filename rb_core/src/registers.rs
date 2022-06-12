@@ -6,6 +6,17 @@ pub struct FlagReg {
     pub carry: bool
 }
 
+impl FlagReg {
+    fn new() -> FlagReg {
+        FlagReg {
+            zero: false,
+            substract: false,
+            half_carry: false,
+            carry: false,
+        }
+    }
+}
+
 const ZERO_FLAG_BYTE_POSITION: u8 = 7;
 const SUBTRACT_FLAG_BYTE_POSITION: u8 = 6;
 const HALF_CARRY_FLAG_BYTE_POSITION: u8 = 5;
@@ -49,6 +60,18 @@ pub struct Registers {
 }
 
 impl Registers {
+    pub fn new() -> Registers {
+        Registers {
+            a: 0,
+            b: 0,
+            c: 0,
+            d: 0,
+            e: 0,
+            f: FlagReg::new(),
+            h: 0,
+            l: 0,
+        }
+    }
     pub fn get_af(&self) -> u16 {
         (self.a as u16) << 8 | u8::from(self.f) as u16
     }

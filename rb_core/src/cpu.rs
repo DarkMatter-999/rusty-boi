@@ -2,7 +2,7 @@ use super::registers::*;
 use super::mem::*;
 use super::instructions::*;
 
-struct CPU {
+pub struct CPU {
     registers: Registers,
     pc: u16,
     sp: u16,
@@ -11,6 +11,14 @@ struct CPU {
 }
 
 impl CPU {
+    pub fn new(bootrombuffer: Option<Vec<u8>>, gamerombuffer: Option<Vec<u8>>) -> CPU {
+        CPU { registers: Registers::new(),
+            pc: 0x0,
+            sp: 0x00,
+            bus: MemBus::new(bootrombuffer, gamerombuffer),
+            is_halted: false
+        }
+    }
     fn step(&mut self) {
         let mut instruction_byte = self.bus.read_byte(self.pc);
         
@@ -838,7 +846,7 @@ impl CPU {
 
     fn add(&mut self, n: u8) -> u8 {
         let (value, overflow) = self.registers.a.overflowing_add(n);
-        self.registers.f.zero = (value == 0);
+        self.registers.f.zero = value == 0;
         self.registers.f.substract = false;
         self.registers.f.carry = overflow;
         self.registers.f.half_carry = (self.registers.a & 0xf) + (value & 0xf) > 0xf;
@@ -856,7 +864,7 @@ impl CPU {
     }
     fn sub(&mut self, n: u8) -> u8 {
         let (value, overflow) = self.registers.a.overflowing_sub(n);
-        self.registers.f.zero = (value == 0);
+        self.registers.f.zero = value == 0;
         self.registers.f.substract = true;
         self.registers.f.carry = overflow;
         self.registers.f.half_carry = (self.registers.a & 0xF) < (value & 0xF);
