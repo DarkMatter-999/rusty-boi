@@ -13,11 +13,14 @@ fn buffer_from_file(path: &str) -> Vec<u8> {
 fn main() {
     let args: Vec<String> = env::args().collect();
     println!("Hello, world! {:?}", args);
-    let bootrombuffer = Some(buffer_from_file(&args[1]));
-    let rombuffer = Some(buffer_from_file(&args[2]));
+    let bootrombuffer = buffer_from_file(&args[1]);
+    let rombuffer = buffer_from_file(&args[2]);
 
 
-    let cpu = CPU::new(bootrombuffer, rombuffer);
+    let mut cpu = CPU::new(Some(bootrombuffer), Some(rombuffer));
+    loop {
+        CPU::step(&mut cpu);
+    }
     alliswell();
 }
 

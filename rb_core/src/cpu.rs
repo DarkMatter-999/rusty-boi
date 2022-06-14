@@ -19,7 +19,7 @@ impl CPU {
             is_halted: false
         }
     }
-    fn step(&mut self) {
+    pub fn step(&mut self) {
         let mut instruction_byte = self.bus.read_byte(self.pc);
         
         let prefix = instruction_byte == 0xcb;
@@ -764,11 +764,10 @@ impl CPU {
             Instruction::JPI => {
                 self.registers.get_hl()
             }
-            // Todo Instruction::LD
-            Instruction::LD(loadtype) => {
-                match loadtype {
-                    LoadType::Byte(target,source) => {
-                        let source_val = match source {
+            Instruction::LD(load_type) => {
+                match load_type {
+                    LoadType::Byte(target, source) => {
+                        let source_value = match source {
                             LoadByteSource::A => self.registers.a,
                             LoadByteSource::B => self.registers.b,
                             LoadByteSource::C => self.registers.c,
@@ -778,28 +777,139 @@ impl CPU {
                             LoadByteSource::L => self.registers.l,
                             LoadByteSource::D8 => self.read_next_byte(),
                             LoadByteSource::HLI => self.bus.read_byte(self.registers.get_hl()),
-                            _ => panic!("Invalid load source recieved")
                         };
                         match target {
-                            LoadByteTarget::A => self.registers.a = source_val,
-                            LoadByteTarget::B => self.registers.b = source_val,
-                            LoadByteTarget::C => self.registers.c = source_val,
-                            LoadByteTarget::D => self.registers.d = source_val,
-                            LoadByteTarget::E => self.registers.e = source_val,
-                            LoadByteTarget::H => self.registers.h = source_val,
-                            LoadByteTarget::L => self.registers.l = source_val,
+                            LoadByteTarget::A => self.registers.a = source_value,
+                            LoadByteTarget::B => self.registers.b = source_value,
+                            LoadByteTarget::C => self.registers.c = source_value,
+                            LoadByteTarget::D => self.registers.d = source_value,
+                            LoadByteTarget::E => self.registers.e = source_value,
+                            LoadByteTarget::H => self.registers.h = source_value,
+                            LoadByteTarget::L => self.registers.l = source_value,
                             LoadByteTarget::HLI => {
-                                self.bus.write_byte(self.registers.get_hl(), source_val)
+                                self.bus.write_byte(self.registers.get_hl(), source_value)
                             }
-                            _ => panic!("Invalid load target recieved")
-                        }    
+                        };
                         match source {
                             LoadByteSource::D8 => self.pc.wrapping_add(2),
                             LoadByteSource::HLI => self.pc.wrapping_add(1),
                             _ => self.pc.wrapping_add(1)
-                        }                     
+                        }
+                    }
+                    LoadType::Word(target) => {
+                        let word = self.read_next_word();
+                        match target {
+                            LoadWordTarget::BC => self.registers.set_bc(word),
+                            LoadWordTarget::DE => self.registers.set_de(word),
+                            LoadWordTarget::HL => self.registers.set_hl(word),
+                            LoadWordTarget::SP => self.sp = word,
+                        };
+                        self.pc.wrapping_add(3)
+                    }
+                    LoadType::AFromIndirect(source) => {
+                        self.registers.a = match source {
+                            Indirect::BCIndirect => self.bus.read_byte(self.registers.get_bc()),
+                            Indirect::DEIndirect => self.bus.read_byte(self.registers.get_de()),
+                            Indirect::HLIndirectMinus => {
+                                let hl = self.registers.get_hl();
+                                self.registers.set_hl(hl.wrapping_sub(1));
+                                self.bus.read_byte(hl)
+                            }
+                            Indirect::HLIndirectPlus => {
+                                let hl = self.registers.get_hl();
+                                self.registers.set_hl(hl.wrapping_add(1));
+                                self.bus.read_byte(hl)
+                            }
+                            Indirect::WordIndirect => self.bus.read_byte(self.read_next_word()),
+                            Indirect::LastByteIndirect => {
+                                self.bus.read_byte(0xFF00 + self.registers.c as u16)
+                            }
+                        };
+
+                        match source {
+                            Indirect::WordIndirect => self.pc.wrapping_add(3),
+                            _ => self.pc.wrapping_add(1)
+                        }
+                    }
+                    LoadType::IndirectFromA(target) => {
+                        let a = self.registers.a;
+                        match target {
+                            Indirect::BCIndirect => {
+                                let bc = self.registers.get_bc();
+                                self.bus.write_byte(bc, a)
+                            }
+                            Indirect::DEIndirect => {
+                                let de = self.registers.get_de();
+                                self.bus.write_byte(de, a)
+                            }
+                            Indirect::HLIndirectMinus => {
+                                let hl = self.registers.get_hl();
+                                self.registers.set_hl(hl.wrapping_sub(1));
+                                self.bus.write_byte(hl, a);
+                            }
+                            Indirect::HLIndirectPlus => {
+                                let hl = self.registers.get_hl();
+                                self.registers.set_hl(hl.wrapping_add(1));
+                                self.bus.write_byte(hl, a);
+                            }
+                            Indirect::WordIndirect => {
+                                let word = self.read_next_word();
+                                self.bus.write_byte(word, a);
+                            }
+                            Indirect::LastByteIndirect => {
+                                let c = self.registers.c as u16;
+                                self.bus.write_byte(0xFF00 + c, a);
+                            }
+                        };
+
+                        match target {
+                            Indirect::WordIndirect => self.pc.wrapping_add(3),
+                            _ => self.pc.wrapping_add(1)
+                        }
+                    }
+                    LoadType::ByteAddressFromA => {
+                        let offset = self.read_next_byte() as u16;
+                        self.bus.write_byte(0xFF00 + offset, self.registers.a);
+                        self.pc.wrapping_add(2)
+                    }
+                    LoadType::AFromByteAddress => {
+                        let offset = self.read_next_byte() as u16;
+                        self.registers.a = self.bus.read_byte(0xFF00 + offset);
+                        self.pc.wrapping_add(2)
+                    }
+                    LoadType::SPFromHL => {
+                        self.sp = self.registers.get_hl();
+                        self.pc.wrapping_add(1)
+                    }
+                    LoadType::IndirectFromSP => {
+                        let address = self.read_next_word();
+                        let sp = self.sp;
+                        self.bus.write_byte(address, (sp & 0xFF) as u8);
+                        self.bus
+                            .write_byte(address.wrapping_add(1), ((sp & 0xFF00) >> 8) as u8);
+                        self.pc.wrapping_add(3)
+                    }
+                    LoadType::HLFromSPN => {
+                        let value = self.read_next_byte() as i8 as i16 as u16;
+                        let result = self.sp.wrapping_add(value);
+                        self.registers.set_hl(result);
+                        self.registers.f.zero = false;
+                        self.registers.f.substract = false;
+                        self.registers.f.half_carry = (self.sp & 0xF) + (value & 0xF) > 0xF;
+                        self.registers.f.carry = (self.sp & 0xFF) + (value & 0xFF) > 0xFF;
+                        self.pc.wrapping_add(2)
                     }
                 }
+            }
+            Instruction::PUSH(target) => {
+                let value = match target {
+                    StackTarget::AF => self.registers.get_af(),
+                    StackTarget::BC => self.registers.get_bc(),
+                    StackTarget::DE => self.registers.get_de(),
+                    StackTarget::HL => self.registers.get_hl(),
+                };
+                self.push(value);
+                self.pc.wrapping_add(1)
             }
             Instruction::PUSH(target) => {
                 let value = match target {
