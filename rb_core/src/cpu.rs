@@ -2,21 +2,24 @@ use super::registers::*;
 use super::mem::*;
 use super::instructions::*;
 
+use super::gpu::{SCREEN_HEIGHT, SCREEN_WIDTH};
 pub struct CPU {
     registers: Registers,
     pc: u16,
     sp: u16,
-    bus: MemBus,
+    pub bus: MemBus,
     is_halted: bool,
+    cycles: u8,
 }
 
 impl CPU {
-    pub fn new(bootrombuffer: Option<Vec<u8>>, gamerombuffer: Option<Vec<u8>>) -> CPU {
+    pub fn new(bootrombuffer: Option<Vec<u8>>, gamerombuffer: Vec<u8>) -> CPU {
         CPU { registers: Registers::new(),
             pc: 0x0,
             sp: 0x00,
             bus: MemBus::new(bootrombuffer, gamerombuffer),
-            is_halted: false
+            is_halted: false,
+            cycles: 0
         }
     }
     pub fn step(&mut self) {
@@ -33,7 +36,14 @@ impl CPU {
         } else {
             panic!("Invalid instruction recieved at 0x{:x}", instruction_byte);
         };
-        self.pc = nextpc;
+        self.cycles = self.cycles.wrapping_add(1);
+        self.bus.step(self.cycles);
+
+        // println!("{} 0x{:x}", prefix, instruction_byte);
+
+        if !self.is_halted {
+            self.pc = nextpc;
+        }
     }
 
     fn execute(&mut self, instruction: Instruction) -> u16 {
@@ -948,6 +958,12 @@ impl CPU {
                 self.is_halted = true;
                 self.pc.wrapping_add(1)
             }
+            Instruction::DI => {
+                self.pc.wrapping_add(1)
+            }
+            Instruction::EI => {
+                self.pc.wrapping_add(1)
+            }
             _ => {
                     self.pc
             }
@@ -1083,9 +1099,9 @@ impl CPU {
             self.pc.wrapping_add(3)
         }
     }
-    fn jump_rel(&mut self, jump: bool) -> u16 {
+    fn jump_rel(&self, should_jump: bool) -> u16 {
         let next_step = self.pc.wrapping_add(2);
-        if jump {
+        if should_jump {
             let offset = self.read_next_byte() as i8;
             let pc = if offset >= 0 {
                 next_step.wrapping_add(offset as u16)
@@ -1139,5 +1155,12 @@ impl CPU {
 
     fn read_next_byte(&self) -> u8 {
         self.bus.read_byte(self.pc + 1)
+    }
+
+    pub const fn getRESH() -> usize {
+        SCREEN_HEIGHT
+    }
+    pub const fn getRESW() -> usize {
+        SCREEN_WIDTH
     }
 }
