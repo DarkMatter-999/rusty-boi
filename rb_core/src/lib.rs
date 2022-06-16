@@ -4,6 +4,8 @@ mod registers;
 mod cpu;
 mod instructions;
 mod gpu;
+mod control;
+mod interrupts;
 
 pub use cpu::CPU;
 

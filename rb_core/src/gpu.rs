@@ -81,6 +81,12 @@ pub enum ObjectSize {
     OS8X16,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum BackgroundAndWindowDataSelect {
+    X8000,
+    X8800,
+}
+
 #[derive(Copy, Clone)]
 pub enum Color {
     White = 255,
@@ -128,6 +134,17 @@ pub enum Mode {
     OAMAccess,
     VRAMAccess,
 }
+impl std::convert::From<Mode> for u8 {
+    fn from(value: Mode) -> Self {
+        match value {
+            Mode::HorizontalBlank => 0,
+            Mode::VerticalBlank => 1,
+            Mode::OAMAccess => 2,
+            Mode::VRAMAccess => 3,
+        }
+    }
+}
+
 pub struct BackgroundColors(Color, Color, Color, Color);
 
 impl BackgroundColors {
@@ -141,6 +158,21 @@ impl BackgroundColors {
     }
 }
 
+impl std::convert::From<u8> for BackgroundColors {
+    fn from(value: u8) -> Self {
+        BackgroundColors(
+            (value & 0b11).into(),
+            ((value >> 2) & 0b11).into(),
+            ((value >> 4) & 0b11).into(),
+            (value >> 6).into(),
+        )
+    }
+}
+
+pub struct Window {
+    pub x: u8,
+    pub y: u8,
+}
 pub struct GPU {
     pub vram: [u8; VRAM_SIZE],
     pub oam: [u8; OAM_SIZE],
@@ -149,14 +181,31 @@ pub struct GPU {
     tile_set: [Tile; 384],
     pub viewport_x_offset: u8,
     pub viewport_y_offset: u8,
-    background_display_enabled: bool,
-    object_display_enabled: bool,
+    pub background_display_enabled: bool,
+    pub object_display_enabled: bool,
     pub line: u8,
-    background_tile_map: TileMap,
-    background_colors: BackgroundColors,
-    object_size: ObjectSize,
-    mode: Mode,
+    pub background_tile_map: TileMap,
+    pub background_colors: BackgroundColors,
+    pub object_size: ObjectSize,
+    pub mode: Mode,
     cycles: u16,
+    pub lcd_display_enabled: bool,
+    pub window_display_enabled: bool,
+    pub window_tile_map: TileMap,
+    pub background_and_window_data_select: BackgroundAndWindowDataSelect,
+    pub line_equals_line_check_interrupt_enabled: bool,
+    pub oam_interrupt_enabled: bool,
+    pub vblank_interrupt_enabled: bool,
+    pub hblank_interrupt_enabled: bool,
+    pub line_equals_line_check: bool,
+    pub line_check: u8,
+    pub obj_0_color_1: Color,
+    pub obj_0_color_2: Color,
+    pub obj_0_color_3: Color,
+    pub obj_1_color_1: Color,
+    pub obj_1_color_2: Color,
+    pub obj_1_color_3: Color,
+    pub window: Window,
 }
 
 impl GPU {
@@ -177,15 +226,31 @@ impl GPU {
             object_size: ObjectSize::OS8X8,
             mode: Mode::HorizontalBlank,
             cycles: 0,
+            lcd_display_enabled: false,
+            window_display_enabled: false,
+            window_tile_map: TileMap::X9800,
+            background_and_window_data_select: BackgroundAndWindowDataSelect::X8800,
+            line_equals_line_check_interrupt_enabled: false,
+            oam_interrupt_enabled: false,
+            vblank_interrupt_enabled: false,
+            hblank_interrupt_enabled: false,
+            line_equals_line_check: false,
+            line_check: 0,
+            obj_0_color_1: Color::LightGray,
+            obj_0_color_2: Color::DarkGray,
+            obj_0_color_3: Color::Black,
+            obj_1_color_1: Color::LightGray,
+            obj_1_color_2: Color::DarkGray,
+            obj_1_color_3: Color::Black,
+            window: Window { x: 0, y: 0 },
         }
     }
 
     pub fn step(&mut self, cycles: u8) -> InterruptRequest {
-        // let mut request = InterruptRequest::None;
-        // self.render_scan_line();
-        // request
-
         let mut request = InterruptRequest::None;
+        if !self.lcd_display_enabled {
+            return request;
+        }
         self.cycles += cycles as u16;
 
         let mode = self.mode;
@@ -198,9 +263,16 @@ impl GPU {
                     if self.line >= 144 {
                         self.mode = Mode::VerticalBlank;
                         request.add(InterruptRequest::VBlank);
+                        if self.vblank_interrupt_enabled {
+                            request.add(InterruptRequest::LCDStat)
+                        }
                     } else {
                         self.mode = Mode::OAMAccess;
+                        if self.oam_interrupt_enabled {
+                            request.add(InterruptRequest::LCDStat)
+                        }
                     }
+                    self.set_equal_lines_check(&mut request);
                 }
             }
             Mode::VerticalBlank => {
@@ -210,7 +282,11 @@ impl GPU {
                     if self.line == 154 {
                         self.mode = Mode::OAMAccess;
                         self.line = 0;
+                        if self.oam_interrupt_enabled {
+                            request.add(InterruptRequest::LCDStat)
+                        }
                     }
+                    self.set_equal_lines_check(&mut request);
                 }
             }
             Mode::OAMAccess => {
@@ -222,6 +298,9 @@ impl GPU {
             Mode::VRAMAccess => {
                 if self.cycles >= 172 {
                     self.cycles = self.cycles % 172;
+                    if self.hblank_interrupt_enabled {
+                        request.add(InterruptRequest::LCDStat)
+                    }
                     self.mode = Mode::HorizontalBlank;
                     self.render_scan_line()
                 }
@@ -229,6 +308,7 @@ impl GPU {
         }
         request
     }
+
 
     pub fn read_vram(&self, addr: usize) -> u8 {
         self.vram[addr]
@@ -319,6 +399,10 @@ impl GPU {
             let row_y_offset = tile_y_index % 8;
             let mut pixel_x_index = self.viewport_x_offset % 8;
 
+            if self.background_and_window_data_select == BackgroundAndWindowDataSelect::X8800 {
+                panic!("TODO: support 0x8800 background and window data select");
+            }
+
             let mut canvas_buffer_offset = self.line as usize * SCREEN_WIDTH * 4;
             // Start at the beginning of the line and go pixel by pixel
             for line_x in 0..SCREEN_WIDTH {
@@ -342,6 +426,9 @@ impl GPU {
                 if pixel_x_index == 0 {
                     // Now increase the tile x_offset by 1
                     tile_x_index = tile_x_index + 1;
+                }
+                if self.background_and_window_data_select == BackgroundAndWindowDataSelect::X8800 {
+                    panic!("TODO: support 0x8800 background and window data select");
                 }
             }
         }
@@ -395,8 +482,10 @@ impl GPU {
                 }
             }
         }
-    }
 
+        if self.window_display_enabled {}
+    }
+    
     fn tile_value_to_background_color(&self, tile_value: &Tilepixelvalues) -> Color {
         match tile_value {
             Tilepixelvalues::Zero => self.background_colors.0,
@@ -405,4 +494,13 @@ impl GPU {
             Tilepixelvalues::Three => self.background_colors.3,
         }
     }
+
+    fn set_equal_lines_check(&mut self, request: &mut InterruptRequest) {
+        let line_equals_line_check = self.line == self.line_check;
+        if line_equals_line_check && self.line_equals_line_check_interrupt_enabled {
+            request.add(InterruptRequest::LCDStat);
+        }
+        self.line_equals_line_check = line_equals_line_check;
+    }
+
 }

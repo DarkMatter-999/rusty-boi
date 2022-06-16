@@ -9,7 +9,7 @@ pub struct CPU {
     sp: u16,
     pub bus: MemBus,
     is_halted: bool,
-    cycles: u8,
+    interrupts_enabled: bool,
 }
 
 impl CPU {
@@ -19,10 +19,11 @@ impl CPU {
             sp: 0x00,
             bus: MemBus::new(bootrombuffer, gamerombuffer),
             is_halted: false,
-            cycles: 0
+            interrupts_enabled: true,
         }
     }
     pub fn step(&mut self) {
+        
         let mut instruction_byte = self.bus.read_byte(self.pc);
         
         let prefix = instruction_byte == 0xcb;
@@ -36,14 +37,43 @@ impl CPU {
         } else {
             panic!("Invalid instruction recieved at 0x{:x}", instruction_byte);
         };
-        self.cycles = self.cycles.wrapping_add(1);
-        self.bus.step(self.cycles);
+        self.bus.step(1);
 
         // println!("{} 0x{:x}", prefix, instruction_byte);
+
+        if self.bus.has_interrupt() {
+            self.is_halted = false;
+        }
 
         if !self.is_halted {
             self.pc = nextpc;
         }
+
+        let mut interrupted = false;
+        if self.interrupts_enabled {
+            if self.bus.interrupt_enable.vblank && self.bus.interrupt_flag.vblank {
+                interrupted = true;
+                self.bus.interrupt_flag.vblank = false;
+                self.interrupt(VBLANK_VECTOR)
+            }
+            if self.bus.interrupt_enable.lcdstat && self.bus.interrupt_flag.lcdstat {
+                interrupted = true;
+                self.bus.interrupt_flag.lcdstat = false;
+                self.interrupt(LCDSTAT_VECTOR)
+            }
+            if self.bus.interrupt_enable.timer && self.bus.interrupt_flag.timer {
+                interrupted = true;
+                self.bus.interrupt_flag.timer = false;
+                self.interrupt(TIMER_VECTOR)
+            }
+        }
+    }
+
+    fn interrupt(&mut self, location: u16) {
+        self.interrupts_enabled = false;
+        self.push(self.pc);
+        self.pc = location;
+        self.bus.step(12);
     }
 
     fn execute(&mut self, instruction: Instruction) -> u16 {
@@ -950,6 +980,10 @@ impl CPU {
                     _ => panic!("Invalid ret value recieved")
                 };
                 self.ret(jumpcondition)
+            }
+            Instruction::RST(target) => {
+                self.push(self.pc.wrapping_add(1));
+                target.to_hex()
             }
             Instruction::NOP => {
                 self.pc.wrapping_add(1)
