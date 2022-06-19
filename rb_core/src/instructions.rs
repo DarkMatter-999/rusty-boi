@@ -898,6 +898,7 @@ pub enum PreFixTarget {
     A,B,C,D,E,H,L,HLI,
 }
 
+#[derive(Copy, Clone, PartialEq)]
 pub enum JumpTest {
     NotZero,Zero,NotCarry,Carry,Always
 }

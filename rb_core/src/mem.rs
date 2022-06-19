@@ -127,67 +127,35 @@ impl MemBus {
     
     pub fn read_byte(&self, addr: u16) -> u8 {
         // println!("0x{:x}", addr);
-        // if addr == 260 {
-        //     println!("{:x}", self.rom_bank_0[(addr+1) as usize]);
-        //     panic!("reading dmg")
+        // if addr >= 260 || addr <= 300 {
+        //     println!("{:x}", addr);
+            // panic!("reading dmg")
         // }
-        // let addr = addr as usize;
-        // match addr {
-        //     BOOT_ROM_BEGIN..=BOOT_ROM_END => {
-        //         // return self.rom_bank_0[addr];
-        //         if let Some(boot_rom) = self.bootrom {
-        //             boot_rom[addr]
-        //         } else {
-        //             self.rom_bank_0[addr]
-        //         }
-        //     }
-        //     ROM_BANK_0_BEGIN..=ROM_BANK_0_END => self.rom_bank_0[addr],
-        //     ROM_BANK_N_BEGIN..=ROM_BANK_N_END => self.rom_bank_n[addr - ROM_BANK_N_BEGIN],
-        //     VRAM_BEGIN..=VRAM_END => self.gpu.vram[addr - VRAM_BEGIN],
-        //     WORKING_RAM_BEGIN..=WORKING_RAM_END => self.working_ram[addr - WORKING_RAM_BEGIN],
-        //     ECHO_RAM_BEGIN..=ECHO_RAM_END => self.working_ram[addr - ECHO_RAM_BEGIN],
-        //     OAM_BEGIN..=OAM_END => self.gpu.oam[addr - OAM_BEGIN],
-        //     UNUSED_BEGIN..=UNUSED_END => {0}
-        //     IO_REGISTERS_BEGIN..=IO_REGISTERS_END => self.read_io_register(addr),
-        //     ZERO_PAGE_BEGIN..=ZERO_PAGE_END => self.zero_page[addr - ZERO_PAGE_BEGIN],
-        //     INTERRUPT_ENABLE_REGISTER => self.interrupt_enable.to_byte(),
-        //     _ => panic!("Cannot read mem 0x{:x}", addr)
-        // }
-
-        // self.memory[addr]
-        let address = addr as usize;
-        match address {
+        let addr = addr as usize;
+        match addr {
             BOOT_ROM_BEGIN..=BOOT_ROM_END => {
-                // self.rom_bank_0[address]
+                // return self.rom_bank_0[addr];
                 if let Some(boot_rom) = self.bootrom {
-                    boot_rom[address]
+                    boot_rom[addr]
                 } else {
-                    self.rom_bank_0[address]
+                    self.rom_bank_0[addr]
                 }
             }
-            ROM_BANK_0_BEGIN..=ROM_BANK_0_END => self.rom_bank_0[address],
-            ROM_BANK_N_BEGIN..=ROM_BANK_N_END => self.rom_bank_n[address - ROM_BANK_N_BEGIN],
-            VRAM_BEGIN..=VRAM_END => self.gpu.vram[address - VRAM_BEGIN],
-            EXTERNAL_RAM_BEGIN..=EXTERNAL_RAM_END => {
-                self.external_ram[address - EXTERNAL_RAM_BEGIN]
-            }
-            WORKING_RAM_BEGIN..=WORKING_RAM_END => self.working_ram[address - WORKING_RAM_BEGIN],
-            ECHO_RAM_BEGIN..=ECHO_RAM_END => self.working_ram[address - ECHO_RAM_BEGIN],
-            OAM_BEGIN..=OAM_END => self.gpu.oam[address - OAM_BEGIN],
-            IO_REGISTERS_BEGIN..=IO_REGISTERS_END => self.read_io_register(address),
-            UNUSED_BEGIN..=UNUSED_END => {
-                /* Reading this always returns 0*/
-                0
-            }
-            ZERO_PAGE_BEGIN..=ZERO_PAGE_END => self.zero_page[address - ZERO_PAGE_BEGIN],
+            ROM_BANK_0_BEGIN..=ROM_BANK_0_END => self.rom_bank_0[addr],
+            ROM_BANK_N_BEGIN..=ROM_BANK_N_END => self.rom_bank_n[addr - ROM_BANK_N_BEGIN],
+            VRAM_BEGIN..=VRAM_END => self.gpu.vram[addr - VRAM_BEGIN],
+            WORKING_RAM_BEGIN..=WORKING_RAM_END => self.working_ram[addr - WORKING_RAM_BEGIN],
+            ECHO_RAM_BEGIN..=ECHO_RAM_END => self.working_ram[addr - ECHO_RAM_BEGIN],
+            OAM_BEGIN..=OAM_END => self.gpu.oam[addr - OAM_BEGIN],
+            UNUSED_BEGIN..=UNUSED_END => {0}
+            IO_REGISTERS_BEGIN..=IO_REGISTERS_END => self.read_io_register(addr),
+            ZERO_PAGE_BEGIN..=ZERO_PAGE_END => self.zero_page[addr - ZERO_PAGE_BEGIN],
             INTERRUPT_ENABLE_REGISTER => self.interrupt_enable.to_byte(),
-            _ => {
-                panic!(
-                    "Reading from an unkown part of memory at address 0x{:x}",
-                    address
-                );
-            }
+            _ => panic!("Cannot read mem 0x{:x}", addr)
         }
+
+        // self.memory[addr]
+        
     }
 
     pub fn write_byte(&mut self, addr: u16, val: u8) {

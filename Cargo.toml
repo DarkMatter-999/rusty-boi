@@ -7,4 +7,11 @@ edition = "2021"
 
 [dependencies]
 rb_core = { path = "./rb_core" }
-sdl2 = "^0.35.2"
+# sdl2 = "^0.35.2"
+minifb = "^0.23.0"
+clap = "^3.2.5"
+
+[dependencies.sdl2]
+version = "^0.35.2"
+default-features = false
+features = ["ttf"]
